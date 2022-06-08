@@ -1,0 +1,48 @@
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['windows-latest', 'ubuntu-latest']
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+
+    - run: pip install -r requirements.txt pyinstaller
+    - run: pyinstaller main.spec
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os }}
+        retention-days: 5
+        path: dist/*
+  
+  publish:
+    if: contains(github.ref, 'tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/download-artifact@v3
+      with:
+        name: 'windows-latest'
+        path: windows.zip
+    - uses: actions/download-artifact@v3
+      with:
+        name: 'ubuntu-latest'
+        path: linux.zip
+    - name: Create a Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      run: |
+        hub release create \
+          --draft \
+          --name "Standalone application ${GITHUB_REF#refs/tags/}" \
+          -a windows.zip -a linux.zip \
+          ${GITHUB_REF#refs/tags/}

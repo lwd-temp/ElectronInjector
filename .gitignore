@@ -1,3 +1,8 @@
 __pycache__
+venv
 packages
+
 .pytest_cache
+
+dist
+build
